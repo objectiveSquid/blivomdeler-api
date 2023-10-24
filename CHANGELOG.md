@@ -1,8 +1,8 @@
 # Changelog
 
 ## 0.1.0
-First release
-Added main class
-Added function to get earned points
-Added login functionality
+First release <br>
+Added main class <br>
+Added function to get earned points <br>
+Added login functionality <br>
 Added logout functionality
