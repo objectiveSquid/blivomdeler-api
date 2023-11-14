@@ -1,4 +1,3 @@
-from .links import POINTS_URL, GIFTS_URL, LOGOUT_URL, LOGIN_URL, INFO_URL
 from .exceptions import InvalidResponseException, InternalAPIException
 from .exceptions import InvalidCredentialsError, LoginRequiredError
 from .translation import MONTHS_DANISH_TO_ENGLISH, translate
@@ -8,9 +7,19 @@ from typing import NoReturn, Iterable, Literal, Any
 from requests import JSONDecodeError, Session
 from .login_result import LoginResult
 from bs4 import BeautifulSoup, Tag
+from re import search as re_search
 from .delivery import Delivery
+from .route import RouteMap
 from warnings import warn
 from datetime import date
+from .links import (
+    ROUTE_MAPS_URL,
+    POINTS_URL,
+    GIFTS_URL,
+    LOGOUT_URL,
+    LOGIN_URL,
+    INFO_URL,
+)
 
 
 class APISession:
@@ -26,6 +35,46 @@ class APISession:
 
         self.__worker_type = None
         self.__session = Session()
+
+    def get_route_maps(self, raw: bool = False) -> dict[int, RouteMap] | dict[int, str]:
+        """raw: Return raw PDF data instead of RouteMap classes"""
+        self.__check_logged_in()
+
+        response = self.__session.get(ROUTE_MAPS_URL)
+
+        page_soup = BeautifulSoup(response.text, "html.parser")
+        route_maps: dict[int, RouteMap] = {}
+        elements: Iterable[Tag] = page_soup.find_all("a", {"class": "edit1"})
+        for element in elements:
+            if not element.has_attr("href"):
+                continue
+            try:
+                option, id = (
+                    int(group)
+                    for group in re_search(
+                        r"(\d*), '(\d*)", element.attrs.get("href", "")
+                    ).groups()
+                )
+                route_number = int(element.text.split(" ")[-1])
+                response = self.__session.get(
+                    f"https://blivomdeler.nu/wp-admin/admin-ajax.php?action=pdfify&option={option}&id={id}"
+                )
+                element_soup = BeautifulSoup(response.text, "html.parser")
+                pdf_link = re_search(
+                    r"(https:\/\/ws.fk.dk\/pdf\/tmp\d*\.pdf)",
+                    element_soup.find("script").text,
+                ).groups()[0]
+                if not raw:
+                    route_maps[route_number] = RouteMap(
+                        35,
+                        pdf_link,
+                    )
+                else:
+                    route_maps[route_number] = pdf_link
+            except (AttributeError, ValueError, IndexError, TypeError):
+                continue
+
+        return route_maps
 
     def change_information(
         self,
@@ -354,8 +403,8 @@ class APISession:
         self.__is_logged_in = False
 
     def login(self, user: str, password: str) -> LoginResult:
-        """password: Password for the account.
-        login: Either the salary number or the phone number."""
+        """user: Either the salary number or the phone number.
+        password: Password for the account."""
         self.__ensure_session_id()
         data = {
             "action": "disy_login",
@@ -532,9 +581,7 @@ class APISession:
 
     @staticmethod
     def __raise_invalid_response() -> NoReturn:
-        raise InvalidResponseException(
-            "invalid response from api, try to update the module or submit an issue on https://github.com/objectiveSquid/blivomdeler-api"
-        )
+        raise InvalidResponseException("invalid response from api")
 
     @staticmethod
     def __raise_unsupported_status_code(status_code: int) -> NoReturn:

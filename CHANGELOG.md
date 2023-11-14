@@ -16,3 +16,6 @@ Added function to get information about the current user <br>
 Added function to change information about the current user <br>
 Removed option to login when creating an instance of the APISession class, use APISession.login() after creating an instance. <br>
 Removed APISession.earned_points property, use APISession.get_earned_points() instead.
+
+## 0.3.0
+Added function to download a route map

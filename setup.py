@@ -11,7 +11,7 @@ CLASSIFIERS = [
 
 KEYWORDS = ["python", "api", "api-wrapper", "blivomdeler", "website-api"]
 DEPENDENCIES = ["requests", "bs4"]
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 NAME = "blivomdeler-api"
 AUTHOR_NAME = "Magnus Zahle"
 AUTHOR_EMAIL = "objectivesquid@outlook.com"
